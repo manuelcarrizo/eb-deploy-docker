@@ -95,7 +95,6 @@ def update_environment(application, environment_name, environment_id, version):
             EnvironmentId = environment_id,
             VersionLabel = version
         )
-        print(res)
     except ClientError as e:
         print(e)
         exit(1)
@@ -125,6 +124,10 @@ def main():
 
     # Verify the json
     filename = args.file
+
+    if not os.path.exists(filename):
+        parser.error("%s does not exists" % filename)
+
     validate_json(filename)
 
     # verify the profile
