@@ -16,7 +16,7 @@ ENVIRONMENT_ID_KEY = "Environment ID"
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", help="JSON file to deploy", default="Dockerrun.aws.json", nargs='?')
+    parser.add_argument("file", help="JSON file to deploy. Defaults to Dockerrun.aws.json", default="Dockerrun.aws.json", nargs='?')
     parser.add_argument("--version-label", help="A label identifying this version.")
     parser.add_argument("--profile", help="Use a specific profile from your credential file.")
 
@@ -96,7 +96,7 @@ def update_environment(application, environment_name, environment_id, version):
         print(e)
         exit(1)
 
-if __name__ == "__main__":
+def main():
     parser = get_parser()
     args = parser.parse_args()
 
@@ -168,3 +168,6 @@ if __name__ == "__main__":
     update_environment(application_name, environment_name, environment_id, version_label)
 
     print("Deploy started, you can check the progress with 'eb events -f'")
+
+if __name__ == "__main__":
+    main()
