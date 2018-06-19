@@ -2,6 +2,7 @@
 
 import os
 import json
+import yaml
 import argparse
 from datetime import datetime
 from subprocess import check_output, CalledProcessError
@@ -54,6 +55,9 @@ def get_environment_info(profile):
 def get_git_commit():
     return check_output("git log -1 --pretty=%B".split(), encoding="utf-8").strip()
 
+def create_version_label():
+    return get_git_commit() + datetime.now().strftime(" %y%m%d_%H%M%S")
+
 def upload_dockerrun(filename, bucket):
     client = boto3.client("s3")
     try:
@@ -96,21 +100,36 @@ def update_environment(application, environment_name, environment_id, version):
         print(e)
         exit(1)
 
+def validate_json(filename):
+    with open(filename) as f:
+        try:
+            json.load(f)
+        except ValueError as e:
+            print("Invalid JSON:", e)
+            exit(1)
+
+def get_config_profile():
+    EB_CONFIG = ".elasticbeanstalk/config.yml"
+
+    if os.path.exists(EB_CONFIG):
+        fp = open(EB_CONFIG)
+        data = yaml.load(fp)
+
+        return data["global"].get("profile", None)
+
+    return None
+
 def main():
     parser = get_parser()
     args = parser.parse_args()
 
     # Verify the json
     filename = args.file
-    with open(filename) as f:
-        try:
-            data = json.load(f)
-        except ValueError as e:
-            print("Invalid JSON:", e)
-            exit(1)
+    validate_json(filename)
 
     # verify the profile
-    profile = args.profile
+    profile = args.profile or get_config_profile()
+
     if profile:
         try:
             boto3.setup_default_session(profile_name=profile)
@@ -118,6 +137,7 @@ def main():
             print("Could not find profile", profile)
             exit(1)
 
+    # get the account id
     try:
         account_id = get_account_id()
     except NoCredentialsError as e:
@@ -143,10 +163,7 @@ def main():
         parser.error("Missing arguments. Application name, region and environment (name or id) required")
 
     # get the version from git if no parameters given
-    if args.version_label:
-        version_label = args.version_label
-    else:
-        version_label = get_git_commit() + datetime.now().strftime(" %y%m%d_%H%M%S")
+    version_label = args.version_label or create_version_label()
 
     print("Deploying version \"%s\" of %s on application %s, environment %s, region %s" % (
         version_label, filename, application_name, (environment_name or environment_id), region
